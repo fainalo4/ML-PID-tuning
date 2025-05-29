@@ -5,14 +5,14 @@ import jax
 from system import *
 
 class Env():
-    def __init__(self, system : SimpleDiscrete, states_size= 1):
+    def __init__(self, system : SimpleDiscrete, states_size= 1, actions_size= 1):
         self.system= system
 
         self.done = False
         self.system.t= 0
 
         self.states_size= states_size
-        self.actions_size= 2
+        self.actions_size= actions_size
 
         self.reward= 0
 
