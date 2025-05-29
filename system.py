@@ -1,7 +1,6 @@
-import numpy as np
 
 class SimpleDiscrete:
-    def __init__(self, A, Bu, Bv, x0, dt):
+    def __init__(self, A, Bu, Bv, x0, v):
         """
         Initialize the environment with system matrices A, B and initial state x0.
         A: State transition matrix (numpy array)
@@ -14,13 +13,16 @@ class SimpleDiscrete:
 
         self.x0 = x0
         self.x = x0
-        self.dt= dt
+        self.v= v
 
-    def step(self, u, v):
+        self.t= 0
+
+    def step(self, u):
         """
         Apply control input u and update the state.
         u: Control input (numpy array or scalar)
         Returns the new state.
         """
-        self.x = self.A * self.x + self.Bu * u + self.Bv * v
+        self.x = self.A * self.x + self.Bu * u + self.Bv * self.v[self.t]
+        self.t += 1
         return self.x
