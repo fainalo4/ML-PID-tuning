@@ -1,6 +1,6 @@
 
 class SimpleDiscrete:
-    def __init__(self, A, Bu, Bv, x0, v):
+    def __init__(self, A, Bu, Bv, x0, x_t, v):
         """
         Initialize the environment with system matrices A, B and initial state x0.
         A: State transition matrix (numpy array)
@@ -13,9 +13,11 @@ class SimpleDiscrete:
 
         self.x0 = x0
         self.x = x0
+        self.x_t= x_t
         self.v= v
 
         self.t= 0
+
 
     def step(self, u):
         """
