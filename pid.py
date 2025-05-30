@@ -1,11 +1,13 @@
-class PIDController:
-    def __init__(self, Kp, Ki, Kd, setpoint):
+class Controller:
+    def __init__(self, Kp, Ki, Kd, setpoint, umin, umax):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
         self.setpoint = setpoint
         self.previous_error = 0
         self.integral = 0
+        self.umin = umin
+        self.umax = umax
 
     def compute(self, process_variable, dt):
         # Calculate error
@@ -24,8 +26,15 @@ class PIDController:
         
         # Compute total output
         output = P_out + I_out + D_out
+
+        actual_output= max(self.umin, min(self.umax, output))
+
+        if actual_output != output:
+            # Anti-windup: reset integral term if output is saturated
+            self.integral = 0
         
         # Update previous error
         self.previous_error = error
         
-        return output
+        return actual_output
+    
