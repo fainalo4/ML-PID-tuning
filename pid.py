@@ -28,13 +28,19 @@ class Controller:
         output = P_out + I_out + D_out
 
         actual_output= max(self.umin, min(self.umax, output))
-
         if actual_output != output:
             # Anti-windup: reset integral term if output is saturated
-            self.integral = 0
+            self.anti_windup(actual_output, output)
         
         # Update previous error
         self.previous_error = error
         
         return actual_output
+    
+
+    def anti_windup(self, actual_output, output):
+        dts= 1
+        # Adjust the integral term to prevent windup
+        self.integral += (actual_output - output)*dts
+        
     
