@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import scipy 
 from tqdm import tqdm
 
-verbose= True
+verbose= False
 
 class DiscreteActionPolicy():
     def __init__(self, env, nn, action_set):
@@ -15,11 +15,12 @@ class DiscreteActionPolicy():
         
     def sample_action(self, params, state):
         action_probs = np.asarray(self.nn(params,state)).astype('float64')
+
         # normalize action_probs to sum to 1 (numpy numerical stability)
         if np.abs(np.sum(action_probs)-1.) < 1e-9:
             pass
         else:
-            if verbose: print("normalizing action_probs")
+            if verbose: print("normalizing action_probs, diff: ", np.sum(action_probs)-1.)
             action_probs = action_probs/np.sum(action_probs)
 
         if verbose: print("action_probs: ", action_probs)
@@ -94,36 +95,19 @@ class Reinforce():
         self.alpha = alpha
         self.history_reward= []
 
+
     def train(self, num_episodes):
-        # TODO: make envirnoment sampling as a func independent of the policy
+        #TODO: make alpha decaying
+
         for episode in tqdm(range(num_episodes), desc="episodes"):
 
-            self.env.state = self.env.reset()
-            rewards = []
-            states = []
-            actions = []
-
-            done = False
-            t=0 
-            while not done:
-                t+= 1
-                if verbose: print("t: ", t)
-
-                action = self.policy.sample_action(self.params_p, self.env.state)
-                next_state, reward, done = self.env.step(action)
-                if verbose: print("state: ", self.env.state, "action: ", action, "reward: ", reward)
-
-                states.append(self.env.state)
-                actions.append(action)
-                rewards.append(reward)
-
-                self.env.state= next_state
+            states, actions, rewards= trajectory(self)
             
             self.history_reward.append( sum(rewards) )
 
-            self.update_policy(states, actions, rewards)
+            self.update_params(states, actions, rewards)
 
-    def update_policy(self, states, actions, rewards):
+    def update_params(self, states, actions, rewards):
         for t in range(len(rewards)):
             if verbose: print("t: ", t)
             G = sum([ self.gamma**(k-t) * rewards[k] for k in range(t, len(rewards))])
@@ -160,32 +144,14 @@ class Reinforce_w_baseline():
 
     def train(self, num_episodes):
         for episode in tqdm(range(num_episodes), desc="episodes"):
-            self.env.state = self.env.reset()
-            rewards = []
-            states = []
-            actions = []
 
-            done = False
-            while not done:
-
-                hot_s= jax.nn.one_hot(self.env.state,num_classes= self.env.states_size)
-                if self.env.name=='CartPole': hot_s= self.env.state
-
-                action = self.policy.sample_action(self.params_p, hot_s)
-                next_state, reward, done = self.env.step(action)
-                if verbose: print("state: ", self.env.state, "action: ", action, "reward: ", reward)
-
-                states.append(self.env.state)
-                actions.append(action)
-                rewards.append(reward)
-
-                self.env.state= next_state
+            states, actions, rewards= trajectory(self)
 
             self.history_reward.append( sum(rewards) )
 
-            self.update_stuff(states, actions, rewards)
+            self.update_params(states, actions, rewards)
 
-    def update_stuff(self, states, actions, rewards):
+    def update_params(self, states, actions, rewards):
         for t in range(len(rewards)):
             G = sum([ self.gamma**(k-t) * rewards[k] for k in range(t, len(rewards))])
 
@@ -225,33 +191,14 @@ class AC():
 
     def train(self, num_episodes):
         for episode in tqdm(range(num_episodes), desc="episodes"):
-            self.env.state = self.env.reset()
-            rewards = []
-            states = []
-            actions = []
 
-            done = False
-            while not done:
-
-                hot_s= jax.nn.one_hot(self.env.state,num_classes= self.env.states_size)
-                if self.env.name=='CartPole': hot_s= self.env.state
-
-                action = self.policy.sample_action(self.params_p, hot_s)
-                next_state, reward, done = self.env.step(action)
-                if verbose: print("state: ", self.env.state, "action: ", action, "reward: ", reward)
-
-                states.append(self.env.state)
-                states.append(next_state)
-                actions.append(action)
-                rewards.append(reward)
-
-                self.env.state= next_state
-
+            states, actions, rewards= trajectory(self)
+            
             self.history_reward.append( sum(rewards) )
 
-            self.update_stuff(states, actions, rewards)
+            self.update_params(states, actions, rewards)
 
-    def update_stuff(self, states, actions, rewards):
+    def update_params(self, states, actions, rewards):
         for t in range(len(rewards)):
             hot_s= jax.nn.one_hot(states[t],num_classes= self.env.states_size)
             hot_s1= jax.nn.one_hot(states[t+1],num_classes= self.env.states_size)
@@ -285,3 +232,32 @@ class AC():
 
 def update(params, grad, step):
     return jax.tree_util.tree_map(lambda p, g: p + step* g, params, grad)
+
+
+def trajectory(self):
+    """
+    Sample trajectories from the environment using the given policy.
+    Returns a list of (state, action, reward) tuples for each episode.
+    """
+    self.env.state = self.env.reset()
+    rewards = []
+    states = []
+    actions = []
+
+    done = False
+    t=0 
+    while not done:
+        t+= 1
+        if verbose: print("t: ", t)
+
+        action = self.policy.sample_action(self.params_p, self.env.state)
+        next_state, reward, done = self.env.step(action)
+        if verbose: print("state: ", self.env.state, "action: ", action, "reward: ", reward)
+
+        states.append(self.env.state)
+        actions.append(action)
+        rewards.append(reward)
+
+        self.env.state= next_state
+    
+    return states, actions, rewards
