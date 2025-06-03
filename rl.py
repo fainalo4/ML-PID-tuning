@@ -88,6 +88,7 @@ class Value():
 
 class Reinforce():
     def __init__(self, env, policy, params, gamma, alpha):
+        
         self.env = env
         self.policy = policy
         self.params_p= params
@@ -132,14 +133,11 @@ class Reinforce_w_baseline():
         self.env = env
         self.policy = policy
         self.params_p= params_p
-
         self.value= value
         self.params_v= params_v
-
         self.gamma = gamma
         self.alpha_p = alpha_p
         self.alpha_v = alpha_v
-
         self.history_reward= []
 
     def train(self, num_episodes):
@@ -153,15 +151,18 @@ class Reinforce_w_baseline():
 
     def update_params(self, states, actions, rewards):
         for t in range(len(rewards)):
+            if verbose: print("t: ", t)
+
             G = sum([ self.gamma**(k-t) * rewards[k] for k in range(t, len(rewards))])
 
-            hot_s= jax.nn.one_hot(states[t],num_classes= self.env.states_size)
-            if self.env.name=='CartPole': hot_s= states[t]
+            hot_s= jnp.array(states[t], dtype=jnp.float32)
 
             td_error= G - self.value.sample_value(self.params_v, hot_s)
 
             grad_v= self.value.gradient_function(self.params_v,
                                                  hot_s)
+            if verbose: print('grad_v: ', grad_v, "step: ", self.alpha_v * td_error)
+
             self.params_v = update(self.params_v,
                                    grad_v,
                                    self.alpha_v * td_error) 
@@ -169,6 +170,8 @@ class Reinforce_w_baseline():
             grad_log_p= self.policy.gradient_function(self.params_p,
                                                       hot_s, 
                                                       actions[t])
+            if verbose: print("grad_log_p: ", grad_log_p, "step: ", self.alpha_p * self.gamma**t * G)
+
             self.params_p = update(self.params_p,
                                  grad_log_p,
                                  self.alpha_p * self.gamma**t * td_error)
@@ -179,35 +182,29 @@ class AC():
         self.env = env
         self.policy = policy
         self.params_p= params_p
-
         self.value= value
         self.params_v= params_v
-
         self.gamma = gamma
         self.alpha_p = alpha_p
         self.alpha_v = alpha_v
-
         self.history_reward= []
 
     def train(self, num_episodes):
         for episode in tqdm(range(num_episodes), desc="episodes"):
 
             states, actions, rewards= trajectory(self)
-            
+
             self.history_reward.append( sum(rewards) )
 
             self.update_params(states, actions, rewards)
 
     def update_params(self, states, actions, rewards):
-        for t in range(len(rewards)):
-            hot_s= jax.nn.one_hot(states[t],num_classes= self.env.states_size)
-            hot_s1= jax.nn.one_hot(states[t+1],num_classes= self.env.states_size)
-            if self.env.name=='CartPole': 
-                hot_s= states[t]
-                hot_s1= states[t+1]
+        for t in range(len(rewards[:-1])):
+            if verbose: print("t: ", t)
 
-            if verbose: print('s ', states[t], 's1 ', states[t+1], 'a ', actions[t], 'r ', rewards[t])
-                
+            hot_s= jnp.array(states[t], dtype=jnp.float32)
+            hot_s1= jnp.array(states[t+1], dtype=jnp.float32)
+
             td_error= rewards[t] \
                         + self.gamma* self.value.sample_value(self.params_v, hot_s1) \
                         - self.value.sample_value(self.params_v, hot_s)
@@ -215,6 +212,8 @@ class AC():
 
             grad_v= self.value.gradient_function(self.params_v,
                                                  hot_s)
+            if verbose: print('grad_v: ', grad_v, "step: ", self.alpha_v * td_error)
+
             self.params_v = update(self.params_v,
                                    grad_v,
                                    self.alpha_v * td_error) 
@@ -222,12 +221,12 @@ class AC():
             grad_log_p= self.policy.gradient_function(self.params_p,
                                                       hot_s, 
                                                       actions[t])
+            if verbose: print("grad_log_p: ", grad_log_p, "step: ", self.alpha_p * self.gamma**t * td_error)
+
             self.params_p = update(self.params_p,
                                  grad_log_p,
                                  self.alpha_p * self.gamma**t * td_error)
             
-            if verbose: print("grad_log_p: ", grad_log_p)
-            if verbose: print("grad_v: ", grad_v)
             
 
 def update(params, grad, step):
