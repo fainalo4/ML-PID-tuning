@@ -1,41 +1,79 @@
 import numpy as np
 import jax
 import jax.numpy as jnp
+import scipy 
 from tqdm import tqdm
 
 verbose= True
 
 class DiscreteActionPolicy():
-    def __init__(self, env, nn):
+    def __init__(self, env, nn, action_set):
         self.env = env
         self.nn = nn
         self.gradient_function= jax.grad(self.log_function)
+        self.action_set = action_set
         
     def sample_action(self, params, state):
-        action_probs = self.nn(params,state)
+        action_probs = np.asarray(self.nn(params,state)).astype('float64')
         # normalize action_probs to sum to 1 (numpy numerical stability)
-        action_probs= np.array(action_probs)
-        action_probs= action_probs/np.sum(action_probs)
+        if np.abs(np.sum(action_probs)-1.) < 1e-9:
+            pass
+        else:
+            if verbose: print("normalizing action_probs")
+            action_probs = action_probs/np.sum(action_probs)
+
         if verbose: print("action_probs: ", action_probs)
 
-        return np.random.choice(self.env.actions_size, p=action_probs)
+        return np.random.choice(self.action_set, p=action_probs)
     
     def log_function(self, params, state, action):
         action_probs = self.nn(params,state)
         return jnp.log(action_probs[action])
     
 class ContinuousActionPolicy():
-    def __init__(self, env, nn):
+    def __init__(self, env, nn, umin, umax):
         self.env = env
         self.nn = nn
-        self.gradient_function= jax.grad(self.sample_action)
+        self.gradient_function= jax.grad(self.log_function)
+
+        self.umin = umin
+        self.umax = umax
         
     def sample_action(self, params, state):
-        return self.nn(params,state)[0]
+        action_params = self.nn(params,state)
+
+        mean = action_params[0]
+        std = jnp.exp(action_params[1])
+        if verbose: print("mu, std: ", mean, std)
+        action= scipy.stats.truncnorm.rvs(
+                                a=(self.umin-mean)/std, 
+                                b=(self.umax-mean)/std, 
+                                loc=mean, 
+                                scale=std)
+
+        # action = scipy.stats.norm.rvs(loc=mean, scale=std)
+
+        return action
     
     def log_function(self, params, state, action):
-        action_probs = self.nn(params,state)
-        return jnp.log(action_probs[action])
+        action_params = self.nn(params,state)
+
+        mean = action_params[0]
+        std = jnp.exp(action_params[1])
+
+        log_p_action= jax.scipy.stats.truncnorm.logpdf(
+                                x= np.array([action]),
+                                a=(self.umin-mean)/std, 
+                                b=(self.umax-mean)/std, 
+                                loc= mean, 
+                                scale= std)
+        
+        # log_p_action= jax.scipy.stats.norm.logpdf(
+        #                         x= np.array([action]),
+        #                         loc=mean, 
+        #                         scale= std)
+        
+        return jnp.asarray(log_p_action)[0]
     
 class Value():
     def __init__(self, env, nn):
@@ -45,6 +83,7 @@ class Value():
         
     def sample_value(self, params, state):
         return self.nn(params,state)[0]
+
 
 class Reinforce():
     def __init__(self, env, policy, params, gamma, alpha):
@@ -56,19 +95,21 @@ class Reinforce():
         self.history_reward= []
 
     def train(self, num_episodes):
+        # TODO: make envirnoment sampling as a func independent of the policy
         for episode in tqdm(range(num_episodes), desc="episodes"):
+
             self.env.state = self.env.reset()
             rewards = []
             states = []
             actions = []
 
             done = False
+            t=0 
             while not done:
-                
-                # TODO: remove one-hot encoding variable name
-                hot_s= jnp.array([self.env.state], dtype=jnp.float32)
-                
-                action = self.policy.sample_action(self.params_p, hot_s)
+                t+= 1
+                if verbose: print("t: ", t)
+
+                action = self.policy.sample_action(self.params_p, self.env.state)
                 next_state, reward, done = self.env.step(action)
                 if verbose: print("state: ", self.env.state, "action: ", action, "reward: ", reward)
 
@@ -84,21 +125,22 @@ class Reinforce():
 
     def update_policy(self, states, actions, rewards):
         for t in range(len(rewards)):
+            if verbose: print("t: ", t)
             G = sum([ self.gamma**(k-t) * rewards[k] for k in range(t, len(rewards))])
             
-            hot_s= hot_s= jnp.array([states[t]], dtype=jnp.float32)
-
-            # grad_log_p= self.policy.gradient_function(self.params_p,
-            #                                           hot_s, 
-            #                                           actions[t])
+            hot_s= jnp.array(states[t], dtype=jnp.float32)
 
             grad_log_p= self.policy.gradient_function(self.params_p,
-                                                      hot_s)
+                                                      hot_s,
+                                                      actions[t])
+            
+            if verbose: print("grad_log_p: ", grad_log_p, "step: ", self.alpha * self.gamma**t * G)
 
             self.params_p = update(self.params_p,
                                  grad_log_p,
                                  self.alpha * self.gamma**t * G)
-
+            
+            if verbose: print("params_p: ", self.params_p)
 
 class Reinforce_w_baseline():
     def __init__(self, env, policy, params_p, value, params_v, gamma, alpha_p, alpha_v):
