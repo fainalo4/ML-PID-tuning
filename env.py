@@ -17,26 +17,37 @@ class Env():
         self.T= T
 
         self.reward= 0
+        # self.error_integral= 0
 
     def reset(self):
         self.system.x = self.system.x0
         self.done = False
         self.system.t= 0
+        # self.error_integral= 0
+
         return self.system.x
  
     def step(self,u):
 
-        x= self.system.x
         x_p=  self.system.step(u)
 
-        reward= self.rewards(x,u)
+        obs= self.observation(x_p)
+        reward= self.rewards(x_p,u)
 
         if self.system.t >=self.T: self.done= True
-        if self.system.x < 0 or self.system.x > 30: 
+        if x_p < 0 or x_p > 30: 
             self.done= True
             reward+= -1000
 
-        return x_p, reward , self.done
+        return obs, reward , self.done
     
     def rewards(self, x, u):
         return -(self.system.x_t - x)**2 - 0.01*u**2  
+    
+    def observation(self,x):
+        return x
+
+    # def observation_1(self):
+    #     self.error= self.system.x_t - self.system.x
+    #     self.error_integral+= self.error
+    #     return jnp.array([self.error, self.error_integral])
