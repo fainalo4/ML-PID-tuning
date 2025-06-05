@@ -45,7 +45,7 @@ class Env():
         return obs, reward , self.done
     
     def rewards(self, x, u):
-        return -(self.system.x_t - x)**2 - 0.01*u**2  
+        return -(self.system.x_t - x)**2 - 0.1*u**2  
     
     def observation(self, x):
         self.error= self.system.x_t - x

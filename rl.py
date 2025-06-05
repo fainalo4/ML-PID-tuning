@@ -1,90 +1,7 @@
-import numpy as np
-import jax
 import jax.numpy as jnp
-import scipy 
 from tqdm import tqdm
 
 verbose= False
-
-class DiscreteActionPolicy():
-    def __init__(self, env, nn, action_set):
-        self.env = env
-        self.nn = nn
-        self.gradient_function= jax.grad(self.log_function)
-        self.action_set = action_set
-        
-    def sample_action(self, params, state):
-        action_probs = np.asarray(self.nn(params,state)).astype('float64')
-
-        # normalize action_probs to sum to 1 (numpy numerical stability)
-        if np.abs(np.sum(action_probs)-1.) < 1e-9:
-            pass
-        else:
-            if verbose: print("normalizing action_probs, diff: ", np.sum(action_probs)-1.)
-            action_probs = action_probs/np.sum(action_probs)
-
-        if verbose: print("action_probs: ", action_probs)
-
-        return np.random.choice(self.action_set, p=action_probs)
-    
-    def log_function(self, params, state, action):
-        action_probs = self.nn(params,state)
-        return jnp.log(action_probs[action])
-    
-class ContinuousActionPolicy():
-    def __init__(self, env, nn, umin, umax):
-        self.env = env
-        self.nn = nn
-        self.gradient_function= jax.grad(self.log_function)
-
-        self.umin = umin
-        self.umax = umax
-        
-    def sample_action(self, params, state):
-        action_params = self.nn(params,state)
-
-        mean = action_params[0]
-        std = jnp.exp(action_params[1])
-        if verbose: print("mu, std: ", mean, std)
-        action= scipy.stats.truncnorm.rvs(
-                                a=(self.umin-mean)/std, 
-                                b=(self.umax-mean)/std, 
-                                loc=mean, 
-                                scale=std)
-
-        # action = scipy.stats.norm.rvs(loc=mean, scale=std)
-
-        return action
-    
-    def log_function(self, params, state, action):
-        action_params = self.nn(params,state)
-
-        mean = action_params[0]
-        std = jnp.exp(action_params[1])
-
-        log_p_action= jax.scipy.stats.truncnorm.logpdf(
-                                x= np.array([action]),
-                                a=(self.umin-mean)/std, 
-                                b=(self.umax-mean)/std, 
-                                loc= mean, 
-                                scale= std)
-        
-        # log_p_action= jax.scipy.stats.norm.logpdf(
-        #                         x= np.array([action]),
-        #                         loc=mean, 
-        #                         scale= std)
-        
-        return jnp.asarray(log_p_action)[0]
-    
-class Value():
-    def __init__(self, env, nn):
-        self.env = env
-        self.nn = nn
-        self.gradient_function= jax.grad(self.sample_value)
-        
-    def sample_value(self, params, state):
-        return self.nn(params,state)[0]
-
 
 class Reinforce():
     def __init__(self, env, policy, params, gamma, alpha):
@@ -110,22 +27,17 @@ class Reinforce():
 
     def update_params(self, states, actions, rewards):
         for t in range(len(rewards)):
+
             if verbose: print("t: ", t)
+
             G = sum([ self.gamma**(k-t) * rewards[k] for k in range(t, len(rewards))])
-            
             hot_s= jnp.array(states[t], dtype=jnp.float32)
+            step= self.alpha * self.gamma**t * G
 
-            grad_log_p= self.policy.gradient_function(self.params_p,
-                                                      hot_s,
-                                                      actions[t])
-            
-            if verbose: print("grad_log_p: ", grad_log_p, "step: ", self.alpha * self.gamma**t * G)
-
-            self.params_p = update(self.params_p,
-                                 grad_log_p,
-                                 self.alpha * self.gamma**t * G)
-            
-            if verbose: print("params_p: ", self.params_p)
+            self.params_p = self.policy.update_policy(hot_s, 
+                                                      actions[t],
+                                                      self.params_p,
+                                                      step)
 
 class Reinforce_w_baseline():
     def __init__(self, env, policy, params_p, value, params_v, gamma, alpha_p, alpha_v):
@@ -158,23 +70,16 @@ class Reinforce_w_baseline():
             hot_s= jnp.array(states[t], dtype=jnp.float32)
 
             td_error= G - self.value.sample_value(self.params_v, hot_s)
+            step_v= self.alpha_v * td_error
+            self.params_v = self.value.update_value(hot_s,
+                                                    self.params_v,
+                                                    step_v)
 
-            grad_v= self.value.gradient_function(self.params_v,
-                                                 hot_s)
-            if verbose: print('grad_v: ', grad_v, "step: ", self.alpha_v * td_error)
-
-            self.params_v = update(self.params_v,
-                                   grad_v,
-                                   self.alpha_v * td_error) 
-
-            grad_log_p= self.policy.gradient_function(self.params_p,
-                                                      hot_s, 
-                                                      actions[t])
-            if verbose: print("grad_log_p: ", grad_log_p, "step: ", self.alpha_p * self.gamma**t * G)
-
-            self.params_p = update(self.params_p,
-                                 grad_log_p,
-                                 self.alpha_p * self.gamma**t * td_error)
+            step_p= self.alpha_p * self.gamma**t * G
+            self.params_p = self.policy.update_policy(hot_s, 
+                                                      actions[t],
+                                                      self.params_p,
+                                                      step_p)
 
 class AC():
     def __init__(self, env, policy, params_p, value, params_v, gamma, alpha_p, alpha_v):
@@ -208,29 +113,19 @@ class AC():
             td_error= rewards[t] \
                         + self.gamma* self.value.sample_value(self.params_v, hot_s1) \
                         - self.value.sample_value(self.params_v, hot_s)
-            if verbose: print("TD: ", td_error)
-
-            grad_v= self.value.gradient_function(self.params_v,
-                                                 hot_s)
-            if verbose: print('grad_v: ', grad_v, "step: ", self.alpha_v * td_error)
-
-            self.params_v = update(self.params_v,
-                                   grad_v,
-                                   self.alpha_v * td_error) 
-
-            grad_log_p= self.policy.gradient_function(self.params_p,
-                                                      hot_s, 
-                                                      actions[t])
-            if verbose: print("grad_log_p: ", grad_log_p, "step: ", self.alpha_p * self.gamma**t * td_error)
-
-            self.params_p = update(self.params_p,
-                                 grad_log_p,
-                                 self.alpha_p * self.gamma**t * td_error)
+            
+            step_v= self.alpha_v * td_error
+            self.params_v = self.value.update_value(hot_s,
+                                                    self.params_v,
+                                                    step_v)
+            
+            step_p= self.alpha_p * self.gamma**t * td_error
+            self.params_p = self.policy.update_policy(hot_s, 
+                                                      actions[t],
+                                                      self.params_p,
+                                                      step_p)
             
             
-
-def update(params, grad, step):
-    return jax.tree_util.tree_map(lambda p, g: p + step* g, params, grad)
 
 
 def trajectory(self):
