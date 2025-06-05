@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 import scipy
 
-verbose= True
+verbose= False
 
 def update(params, grad, step):
     return jax.tree_util.tree_map(lambda p, g: p + step* g, params, grad)
