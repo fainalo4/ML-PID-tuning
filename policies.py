@@ -126,7 +126,8 @@ class Value():
         self.gradient_function= jax.grad(self.sample_value)
         
     def sample_value(self, params, state):
-        return self.nn(params,state)[0]
+        v= self.nn(params,state)
+        return jnp.reshape(v,())
     
     def update_value(self, s, params, step):
         grad_v= self.gradient_function(params, s)
