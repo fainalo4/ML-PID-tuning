@@ -75,7 +75,7 @@ class Reinforce_w_baseline():
                                                     self.params_v,
                                                     step_v)
 
-            step_p= self.alpha_p * self.gamma**t * G
+            step_p= self.alpha_p * self.gamma**t * td_error
             self.params_p = self.policy.update_policy(hot_s, 
                                                       actions[t],
                                                       self.params_p,
