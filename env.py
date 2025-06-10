@@ -1,8 +1,12 @@
-import numpy as np
-import gymnasium as gym
 import jax.numpy as jnp
 import jax
 from system import *
+import haiku as hk
+
+verbose= False
+
+KEY= jax.random.PRNGKey(4)
+KEYS= hk.PRNGSequence(KEY)
 
 class Env():
     def __init__(self, system : SimpleDiscrete, T= 96):
@@ -20,7 +24,15 @@ class Env():
         # TODO: add env state variable
 
     def reset(self):
-        self.system.x = self.system.x0
+        if verbose: print("Initial state: ", self.system.x0)
+
+        self.system.x = self.system.x0 + jax.random.normal(next(KEYS))
+        self.system.v = jax.random.uniform(next(KEYS), minval= 15, maxval=25)  + \
+                        jax.random.normal(next(KEYS), shape=(self.T,))
+        
+        if verbose: print("Initial state after noise: ", self.system.x)
+        if verbose: print("Disturbance: \n ", self.system.v)
+        
         self.done = False
         self.system.t= 0
         self.error_integral= 0
@@ -45,7 +57,7 @@ class Env():
         return obs, reward , self.done
     
     def rewards(self, x, u):
-        return -(self.system.x_t - x)**2 - 0.1*u**2  
+        return -(self.system.x_t - x)**2 - 0.01*u**2  
     
     def observation(self, x):
         self.error= self.system.x_t - x
