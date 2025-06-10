@@ -1,4 +1,5 @@
-notebooks/
+biblio/
 *.ipynb
 __pycache__/
 *.pyc
+tests/
