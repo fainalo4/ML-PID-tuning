@@ -27,8 +27,7 @@ class Env():
         if verbose: print("Initial state: ", self.system.x0)
 
         self.system.x = self.system.x0 + jax.random.normal(next(KEYS))
-        self.system.v = jax.random.uniform(next(KEYS), minval= 15, maxval=25)  + \
-                        jax.random.normal(next(KEYS), shape=(self.T,))
+        self.system.v = self.random_disturbance()
         
         if verbose: print("Initial state after noise: ", self.system.x)
         if verbose: print("Disturbance: \n ", self.system.v)
@@ -63,3 +62,13 @@ class Env():
         self.error= self.system.x_t - x
         self.error_integral+= self.error
         return jnp.array([self.error, self.error_integral])
+    
+
+    def random_disturbance(self):
+        v0 = jax.random.uniform(next(KEYS), minval= 15, maxval=20) 
+        
+        v=[v0]
+        for t in range(self.T-1):
+            v.append(v[t] + jax.random.normal(next(KEYS), shape=()) * 0.5)
+
+        return v

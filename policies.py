@@ -5,6 +5,8 @@ import scipy
 
 verbose= False
 
+# TODO: add function to stop if Nan in gradients
+
 def update(params, grad, step):
     return jax.tree_util.tree_map(lambda p, g: p + step* g, params, grad)
 
