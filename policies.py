@@ -5,7 +5,6 @@ import scipy
 
 verbose= False
 
-# TODO: add function to stop if Nan in gradients
 
 def update(params, grad, step):
     return jax.tree_util.tree_map(lambda p, g: p + step* g, params, grad)
@@ -38,6 +37,10 @@ class DiscreteActionPolicy():
     def update_policy(self,s,a,params,step):
             
         grad_log_p= self.gradient_function(params,s,a)
+
+        # check if there are NaN values in the gradient
+        if jnp.isnan(grad_log_p).any():
+            raise ValueError("NaN values in policy gradient")
         
         if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
@@ -86,6 +89,10 @@ class ContinuousActionPolicy_Prob():
     def update_policy(self,s,a,params,step):
             
         grad_log_p= self.gradient_function(params,s,a)
+
+        # check if there are NaN values in the gradient
+        if jnp.isnan(grad_log_p).any():
+            raise ValueError("NaN values in policy gradient")
         
         if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
@@ -111,6 +118,10 @@ class ContinuousActionPolicy_Deter():
     def update_policy(self,s,a,params,step):
             
         grad_log_p= self.gradient_function(params,s)
+
+        # check if there are NaN values in the gradient
+        if jnp.isnan(grad_log_p).any():
+            raise ValueError("NaN values in policy gradient")
         
         if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
@@ -133,6 +144,10 @@ class Value():
     
     def update_value(self, s, params, step):
         grad_v= self.gradient_function(params, s)
+
+        # check if there are NaN values in the gradient
+        if jnp.isnan(grad_v).any():
+            raise ValueError("NaN values in value gradient")
         
         if verbose: print('grad_v: ', grad_v, "step: ", step)
 
