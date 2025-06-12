@@ -1,7 +1,7 @@
 
 
 class PID:
-    def __init__(self, Kp, Ki, Kd, setpoint, umin, umax):
+    def __init__(self, Kp, Ki, Kd, setpoint, umin, umax,dt):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
@@ -10,8 +10,9 @@ class PID:
         self.integral = 0
         self.umin = umin
         self.umax = umax
+        self.dt= dt
 
-    def compute(self, x, dt):
+    def compute(self, x):
         # Calculate error
         error = self.setpoint - x
         
@@ -19,11 +20,11 @@ class PID:
         P_out = self.Kp * error
         
         # Integral term
-        self.integral += error * dt
+        self.integral += error * self.dt
         I_out = self.Ki * self.integral
         
         # Derivative term
-        derivative = (error - self.previous_error) / dt
+        derivative = (error - self.previous_error) / self.dt
         D_out = self.Kd * derivative
         
         # Compute total output
