@@ -85,3 +85,19 @@ class Env(gym.Env):
         for t in range(self.T-1):
             v.append(v[t] + jax.random.normal(next(KEYS), shape=()) * 0.5)
         return v
+
+
+    def reset_for_test(self,v):
+
+        self.system.x = self.system.x0
+        self.system.v = v
+        
+        self.terminated = False
+        self.truncated= False
+
+        self.system.t= 0
+        self.error_integral= 0
+
+        obs= self.observation(self.system.x)
+
+        return obs, {}
