@@ -37,12 +37,11 @@ class DiscreteActionPolicy():
     def update_policy(self,s,a,params,step):
             
         grad_log_p= self.gradient_function(params,s,a)
+        if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
         # check if there are NaN values in the gradient
-        if jnp.isnan(grad_log_p).any():
+        if jnp.isnan(tree_ravel(grad_log_p)).any():
             raise ValueError("NaN values in policy gradient")
-        
-        if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
         new_params = update(params, grad_log_p, step)
         
@@ -89,13 +88,12 @@ class ContinuousActionPolicy_Prob():
     def update_policy(self,s,a,params,step):
             
         grad_log_p= self.gradient_function(params,s,a)
-
-        # check if there are NaN values in the gradient
-        if jnp.isnan(grad_log_p).any():
-            raise ValueError("NaN values in policy gradient")
-        
         if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
+        # check if there are NaN values in the gradient
+        if jnp.isnan(tree_ravel(grad_log_p)).any():
+            raise ValueError("NaN values in policy gradient")
+        
         new_params = update(params, grad_log_p, step)
         
         if verbose: print("params_p: ", params)
@@ -118,12 +116,11 @@ class ContinuousActionPolicy_Deter():
     def update_policy(self,s,a,params,step):
             
         grad_log_p= self.gradient_function(params,s)
+        if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
         # check if there are NaN values in the gradient
-        if jnp.isnan(grad_log_p).any():
+        if jnp.isnan(tree_ravel(grad_log_p)).any():
             raise ValueError("NaN values in policy gradient")
-        
-        if verbose: print("grad_log_p: ", grad_log_p, "step: ", step)
 
         new_params = update(params, grad_log_p, step)
         
@@ -144,15 +141,19 @@ class Value():
     
     def update_value(self, s, params, step):
         grad_v= self.gradient_function(params, s)
+        if verbose: print('grad_v: ', grad_v, "step: ", step)
 
         # check if there are NaN values in the gradient
-        if jnp.isnan(grad_v).any():
+        if jnp.isnan(tree_ravel(grad_v)).any():
             raise ValueError("NaN values in value gradient")
-        
-        if verbose: print('grad_v: ', grad_v, "step: ", step)
 
         new_params = update(params, grad_v, step)
         
         if verbose: print("params_v: ", params)
 
         return new_params
+    
+
+# Function that returns a vector containing all parameters
+def tree_ravel(pytree):
+    return jnp.concatenate([jnp.ravel(leaf) for leaf in jax.tree_leaves(pytree)])
