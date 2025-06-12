@@ -133,7 +133,7 @@ def trajectory(self):
     Sample trajectories from the environment using the given policy.
     Returns a list of (state, action, reward) tuples for each episode.
     """
-    self.env.state = self.env.reset()
+    self.env.state, _= self.env.reset()
     rewards = []
     states = []
     actions = []
@@ -145,7 +145,7 @@ def trajectory(self):
         if verbose: print("t: ", t)
 
         action = self.policy.sample_action(self.params_p, self.env.state)
-        next_state, reward, done = self.env.step(action)
+        next_state, reward, term, trunc, _ = self.env.step(action)
         if verbose: print("state: ", self.env.state, "action: ", action, "reward: ", reward)
 
         states.append(self.env.state)
@@ -153,5 +153,6 @@ def trajectory(self):
         rewards.append(reward)
 
         self.env.state= next_state
+        done= term or trunc
     
     return states, actions, rewards
