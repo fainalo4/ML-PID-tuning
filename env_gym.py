@@ -71,7 +71,7 @@ class Env(gym.Env):
         return obs, reward, self.terminated, self.truncated, {}
     
     def rewards(self, x, u):
-        return -(self.system.x_t - x)**2 - 0.01*u**2  
+        return -(self.system.x_t - x)**2 - 0.0001*u**2  
     
     def observation(self, x):
         self.error= self.system.x_t - x
