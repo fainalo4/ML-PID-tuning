@@ -67,9 +67,13 @@ class Env(gym.Env):
         return obs, reward, self.terminated, self.truncated, {}
     
     def rewards(self, x, u):
-        r_vec= -(self.system.x_t - x)**2 - 0.0001*u**2
-        return float(np.sum(r_vec))
-    
+        '''
+        Compute average reward over observations
+        '''
+        r_vec= (self.system.x_t - x)**2 + 0.0001*u**2
+        dim= x.shape[0]
+        return float(-np.sum(r_vec)/dim)
+        
     def observation(self, x):
         self.error= self.system.x_t - x
         self.error_integral+= self.error
