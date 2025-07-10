@@ -15,7 +15,6 @@ class Env(gym.Env):
         self.observation_space= spaces.Box(-np.inf, np.inf, shape=(2*o_dim,1))
         
         self.action_space= spaces.Box(np.float32(umin), np.float32(umax), shape=(a_dim,1))
-        # in case it can be changed after init
 
         self.system= system
 
@@ -70,22 +69,23 @@ class Env(gym.Env):
         '''
         Compute average reward over observations
         '''
-        r_vec= (self.system.x_t - x)**2 + 0.0001*u**2
+        r_vec= (self.system.x_t.T - x)**2 + 0.0001*u**2
         dim= x.shape[0]
         return float(-np.sum(r_vec)/dim)
         
     def observation(self, x):
         self.error= self.system.x_t - x
         self.error_integral+= self.error
-        return np.concatenate([self.error, self.error_integral], axis=0)
+        obs= np.concatenate([self.error, self.error_integral], axis=1)
+        return obs.flatten().reshape(obs.size,1)
     
 
     def random_disturbance(self):
         v_dim= self.system.Bv.shape[1]
         v0 = np.random.uniform(low= 15, high=20, size=(v_dim,1)) 
-        v=[v0]
+        v=v0
         for t in range(self.T-1):
-            v.append(v[t] + np.random.normal(size=(v_dim,1)) * 0.5)
+            v= np.concatenate([v,v[t] + np.random.normal(size=(v_dim,1)) * 0.5])
         return v
 
 
