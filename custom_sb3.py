@@ -17,7 +17,8 @@ from torch import nn
 import numpy as np
 
 from stable_baselines3.common.policies import ActorCriticPolicy
-from stable_baselines3.common.distributions import DiagGaussianDistribution
+from stable_baselines3.common.distributions import (DiagGaussianDistribution,
+                                                    StateDependentNoiseDistribution)
 from stable_baselines3.common.type_aliases import Schedule
 from stable_baselines3.common.preprocessing import get_action_dim
 
@@ -52,6 +53,31 @@ class CustomDistribution(DiagGaussianDistribution):
         log_std = nn.Parameter(th.ones(self.action_dim) * log_std_init, requires_grad=True)
         return mean_actions, log_std
 
+class CustomgSDEDistribution(StateDependentNoiseDistribution):
+    def __init__(self, action_dim: int, use_expln: bool):
+        super().__init__(action_dim= action_dim,
+                         use_expln= use_expln)
+    
+    def proba_distribution_net(
+            self, latent_dim: int, log_std_init: float = 0.0, latent_sde_dim: Optional[int] = None
+        ) -> tuple[nn.Module, nn.Parameter]:
+            """
+            Create the layers and parameter that represent the distribution:
+            one output will be the deterministic action, the other parameter will be the
+            standard deviation of the distribution that control the weights of the noise matrix.
+
+            :param latent_dim: Dimension of the last layer of the policy (before the action layer)
+            :param log_std_init: Initial value for the log standard deviation
+            :param latent_sde_dim: Dimension of the last layer of the features extractor
+                for gSDE. By default, it is shared with the policy network.
+            :return:
+            """
+            mean_actions_net = nn.Identity((latent_dim, self.action_dim))
+            self.latent_sde_dim = latent_dim if latent_sde_dim is None else latent_sde_dim
+            log_std = nn.Parameter(th.ones(self.latent_sde_dim,self.action_dim) * log_std_init, requires_grad=True)
+            self.sample_weights(log_std)
+            return mean_actions_net, log_std
+
 
 class CustomExtractor(nn.Module):
     """
@@ -78,11 +104,12 @@ class CustomExtractor(nn.Module):
         self.obs_dim= observation_dim
 
         # Policy network
-        self.policy_net =  nn.Linear(in_features= observation_dim,
-                      out_features= action_dim,
-                      bias= False)
+        # self.policy_net =  nn.Linear(
+        #             in_features= observation_dim,
+        #             out_features= action_dim,
+        #             bias= False)
 
-        # self.policy_net= MultiNN(controllers_number= self.obs_dim//2)
+        self.policy_net= MultiNN(controllers_number= self.obs_dim//2)
         
         # Value network
         self.value_net = nn.Sequential(
@@ -92,10 +119,6 @@ class CustomExtractor(nn.Module):
         )
 
     def forward(self, features: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
-        """
-        :return: (th.Tensor, th.Tensor) latent_policy, latent_value of the specified network.
-            If all layers are shared, then ``latent_policy == latent_value``
-        """
         return self.forward_actor(features), self.forward_critic(features)
 
     def forward_actor(self, features: th.Tensor) -> th.Tensor:
@@ -111,6 +134,7 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         observation_space: spaces.Space,
         action_space: spaces.Space,
         lr_schedule: Callable[[float], float],
+        use_expln = False,
         *args,
         **kwargs,
     ):
@@ -124,6 +148,7 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
             observation_space,
             action_space,
             lr_schedule,
+            use_expln= use_expln,
             *args,
             **kwargs,
         )
@@ -145,13 +170,16 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         latent_dim_pi = self.mlp_extractor.latent_dim_pi
 
         self.action_dist = CustomDistribution(get_action_dim(self.action_space))
+        # self.action_dist = CustomgSDEDistribution(get_action_dim(self.action_space),
+        #                                          use_expln=True)
 
         self.action_net, self.log_std = self.action_dist.proba_distribution_net(
                 latent_dim=latent_dim_pi, log_std_init=self.log_std_init)
         
-        self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1)
+        self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1, bias= False)
+
         # Setup optimizer with initial learning rate
-        self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)  # type: ignore[call-arg]
+        self.optimizer = self.optimizer_class(self.parameters(), lr= lr_schedule(1), **self.optimizer_kwargs) # type: ignore
 
 
 
