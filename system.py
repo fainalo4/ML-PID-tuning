@@ -58,7 +58,7 @@ class MultiDiscrete:
         u: Control input (numpy array)
         Returns the new state.
         """
-        v_t= self.v[self.t].reshape(self.Bv.shape[1],1)
+        v_t= self.v[:,self.t].reshape(self.Bv.shape[1],1)
         self.x = self.A @ self.x + self.Bu @ u + self.Bv @ v_t
         self.t += 1
         return self.x
