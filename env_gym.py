@@ -13,19 +13,16 @@ class Env(gym.Env):
         self.render_mode= None
 
         self.observation_space= spaces.Box(-np.inf, np.inf, shape=(2*o_dim,1))
-        
         self.action_space= spaces.Box(np.float32(umin), np.float32(umax), shape=(a_dim,1))
 
         self.system= system
+        self.system.t= 0
+        self.T= T
+        self.error_integral= 0
 
         self.terminated = False
         self.truncated= False
-
-        self.system.t= 0
-        self.T= T
-
         self.reward= 0
-        self.error_integral= 0
 
         # TODO: add env state variable
 
@@ -34,17 +31,17 @@ class Env(gym.Env):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
+        # SYSTEM
         self.system.x = self.system.x0 + np.random.uniform(low=-5, high=5,
                                                            size= self.system.x0.shape)
         self.system.v = self.random_disturbance()
-        
-        self.terminated = False
-        self.truncated= False
-
         self.system.t= 0
         self.error_integral= 0
 
-        obs= self.observation(self.system.x)
+        # ENV
+        self.terminated = False
+        self.truncated= False
+        obs= self.observation(self.system.observe(self.system.x))
 
         return obs, {}
  
@@ -91,15 +88,15 @@ class Env(gym.Env):
 
     def reset_for_test(self,v):
 
+        # SYSTEM
         self.system.x = self.system.x0
         self.system.v = v
-        
-        self.terminated = False
-        self.truncated= False
-
         self.system.t= 0
         self.error_integral= 0
 
-        obs= self.observation(self.system.x)
+        # ENV
+        self.terminated = False
+        self.truncated= False
+        obs= self.observation(self.system.observe(self.system.x))
 
         return obs, {}
