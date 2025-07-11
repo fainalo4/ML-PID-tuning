@@ -1,37 +1,8 @@
+import numpy as np
 
-class SimpleDiscrete:
-    def __init__(self, A, Bu, Bv, x0, x_t, v):
-        """
-        Initialize the environment with system matrices A, B and initial state x0.
-        A: State transition matrix (scalar)
-        B: Control input matrix (scalar)
-        x0: Initial state (scalar). 
-        """
-        self.A = A
-        self.Bu = Bu
-        self.Bv = Bv
-
-        self.x0 = x0
-        self.x = x0
-        self.x_t= x_t
-        self.v= v
-
-        self.t= 0
-
-
-    def step(self, u):
-        """
-        Apply control input u and update the state.
-        u: Control input (scalar)
-        Returns the new state.
-        """
-        self.x = self.A * self.x + self.Bu * u + self.Bv * self.v[self.t]
-        self.t += 1
-        return self.x
-
-
-class MultiDiscrete:
-    def __init__(self, A, Bu, Bv, x0, x_t, v):
+class Discrete:
+    def __init__(self, A, Bu, Bv, x0, x_t, v,
+                 obs_index, act_index):
         """
         Initialize the environment with system matrices A, B and initial state x0.
         A: State transition matrix (numpy array)
@@ -51,6 +22,9 @@ class MultiDiscrete:
 
         self.t= 0
 
+        self.observability= obs_index
+        self.actuability= act_index
+
 
     def step(self, u):
         """
@@ -58,7 +32,19 @@ class MultiDiscrete:
         u: Control input (numpy array)
         Returns the new state.
         """
+
+        c_u= self.actuate(u)
         v_t= self.v[:,self.t].reshape(self.Bv.shape[1],1)
-        self.x = self.A @ self.x + self.Bu @ u + self.Bv @ v_t
+
+        self.x = self.A @ self.x + self.Bu @ c_u + self.Bv @ v_t
         self.t += 1
-        return self.x
+
+        return self.observe(self.x)
+    
+    def observe(self,x):
+        return x[self.observability]
+    
+    def actuate(self,u):
+        complete_u= np.zeros([self.Bu.shape[1],1])
+        complete_u[self.actuability]= u
+        return complete_u
