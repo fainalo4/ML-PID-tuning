@@ -26,7 +26,7 @@ class Env(gym.Env):
 
         # TODO: add env state variable
 
-    def reset(self, seed= None):
+    def reset(self, seed= None, v= None):
 
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
@@ -34,7 +34,7 @@ class Env(gym.Env):
         # SYSTEM
         self.system.x = self.system.x0 + np.random.uniform(low=-5, high=5,
                                                            size= self.system.x0.shape)
-        self.system.v = self.random_disturbance()
+        self.system.v = self.random_disturbance() if v is None else v
         self.system.t= 0
         self.error_integral= 0
 
@@ -84,19 +84,3 @@ class Env(gym.Env):
         for t in range(self.T-1):
             v= np.concatenate([v, v[:,t].reshape(v_dim,1) + np.random.normal(size=(v_dim,1)) * 0.5], axis=1)
         return v
-
-
-    def reset_for_test(self,v):
-
-        # SYSTEM
-        self.system.x = self.system.x0
-        self.system.v = v
-        self.system.t= 0
-        self.error_integral= 0
-
-        # ENV
-        self.terminated = False
-        self.truncated= False
-        obs= self.observation(self.system.observe(self.system.x))
-
-        return obs, {}
