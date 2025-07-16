@@ -1,4 +1,4 @@
-
+import numpy as np
 
 class PID:
     def __init__(self, Kp, Ki, Kd, setpoint, umin, umax, dt):
@@ -42,7 +42,7 @@ class PID:
         # Update previous error
         self.previous_error = error
         
-        return actual_output
+        return np.array(actual_output).reshape(1,)
     
 
     def anti_windup(self, actual_output, output):
