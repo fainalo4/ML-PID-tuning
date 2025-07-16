@@ -1,7 +1,7 @@
 
 
 class PID:
-    def __init__(self, Kp, Ki, Kd, setpoint, umin, umax,dt):
+    def __init__(self, Kp, Ki, Kd, setpoint, umin, umax, dt):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
@@ -11,6 +11,10 @@ class PID:
         self.umin = umin
         self.umax = umax
         self.dt= dt
+
+    def reset(self):
+        self.previous_error = 0
+        self.integral = 0
 
     def compute(self, x):
         # Calculate error
@@ -56,6 +60,9 @@ class Relay:
         self.umax = umax
 
         self.z = 1  # 0 for umin, 1 for umax
+    
+    def reset(self):
+        self.z= 1
 
     def compute(self, x):
         

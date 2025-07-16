@@ -17,15 +17,16 @@ def reward_callback(_locals, _globals):
     return output
 
 
-def pid_trajectory(env, v, controller):
+def pid_trajectory(env, v, x0, controller):
     """
     Sample trajectories from the environment using the given controller.
     Returns a list of (state, action, reward) tuples for each episode.
     """
     verbose= False
 
-    _,_ = env.reset(v=v)
+    _,_ = env.reset(v=v, x0=x0)
     x= env.system.observe(env.system.x)
+    controller.reset()
 
     rewards = []
     states = []
