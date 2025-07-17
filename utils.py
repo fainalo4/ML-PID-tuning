@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 EPISODE_REWARDS= []
 
@@ -54,35 +55,29 @@ def pid_trajectory(env, v, x0, controller):
     return states, actions, rewards, sys_states
 
 
-def trajectory(env, v, controller):
-    """
-    Sample trajectories from the environment using the given controller.
-    Returns a list of (state, action, reward) tuples for each episode.
-    """
-    verbose= True
+def plot_test(time, states, x_t, actions, v_test, umin, umax):
+    fig, ax1 = plt.subplots()
 
-    state,_ = env.reset_for_test(v)
+    color = 'tab:blue'
+    ax1.set_xlabel('time (hr)')
+    ax1.set_ylabel('T [°C]', color=color)
+    ax1.plot(time, states, color=color, label='x')
+    ax1.plot(time, v_test, color=color, alpha=0.5, label='v')
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_ylim((0, 30))
+    ax1.set_xlim((0, 23))
+    ax1.grid()
 
-    rewards = []
-    states = []
-    actions = []
+    plt.axhline(y=x_t[0], color=color, linestyle='--', label='x target')
 
-    done = False
-    t=0 
-    while not done:
-        t+= 1
-        if verbose: print("t: ", t)
+    ax2 = ax1.twinx()  # instantiate a second Axes that shares the same x-axis
 
-        action = controller.compute(state)
-        next_state, reward, term, trunc, _ = env.step(action)
-        if verbose: print("state: ", state, "action: ", action, "reward: ", reward)
+    color = 'tab:orange'
+    ax2.set_ylabel('Q [kW]', color=color)  # we already handled the x-label with ax1
+    ax2.plot(time, actions, color=color, label='u')
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.set_ylim((umin[0][0], umax[0][0]))
 
-        states.append(state)
-        actions.append(action)
-        rewards.append(reward)
-
-        state= next_state
-        done= term or trunc
-        if done: states.append(next_state)
-    
-    return states, actions, rewards
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    fig.legend(bbox_to_anchor=(0.3, 0.4))
+    plt.show()
