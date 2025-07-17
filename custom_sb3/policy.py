@@ -48,12 +48,12 @@ class CustomExtractor(nn.Module):
         self.obs_dim= observation_dim
 
         # Policy network
-        # self.policy_net =  nn.Linear(
-        #             in_features= observation_dim,
-        #             out_features= action_dim,
-        #             bias= False)
+        self.policy_net =  nn.Linear(
+                    in_features= observation_dim,
+                    out_features= action_dim,
+                    bias= False)
 
-        self.policy_net= FA.MultiNN(controllers_number= self.obs_dim//2)
+        # self.policy_net= FA.MultiNN(controllers_number= self.obs_dim//2)
         
         # Value network
         self.value_net = nn.Sequential(
