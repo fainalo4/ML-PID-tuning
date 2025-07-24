@@ -7,7 +7,7 @@ from stable_baselines3.common.distributions import (DiagGaussianDistribution,
                                                     StateDependentNoiseDistribution)
 
 
-class MultiNN(nn.Module):
+class MultiPI(nn.Module):
     def __init__(self, controllers_number) -> None:
         super().__init__()
         self.linears = nn.ModuleList([nn.Linear(2, 1, bias= False) for i in range(controllers_number)])
@@ -18,6 +18,25 @@ class MultiNN(nn.Module):
             y= th.cat([y, l(x[0][2*i:2*(i+1)]) ])
         return y
 
+class NN(nn.Module):
+    def __init__(self, input_dim, output_dim) -> None:
+        super().__init__()
+        self.nonlinear = nn.Sequential(
+            nn.Linear(input_dim, 4), nn.ReLU(),
+            nn.Linear(4,2), nn.ReLU(),
+            nn.Linear(2,output_dim))
+
+    def forward(self, x: th.Tensor) -> th.Tensor:
+        return self.nonlinear(x)
+
+class Quadratic(nn.Module):
+    def __init__(self, input_dim, output_dim) -> None:
+        super().__init__()
+        self.quad = nn.Sequential()
+
+    def forward(self, x: th.Tensor) -> th.Tensor:
+        return th.Tensor()
+    
 
 class CustomDistribution(DiagGaussianDistribution):
     def __init__(self, action_dim: int):

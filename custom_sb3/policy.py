@@ -48,19 +48,13 @@ class CustomExtractor(nn.Module):
         self.obs_dim= observation_dim
 
         # Policy network
-        self.policy_net =  nn.Linear(
-                    in_features= observation_dim,
-                    out_features= action_dim,
-                    bias= False)
-
-        # self.policy_net= FA.MultiNN(controllers_number= self.obs_dim//2)
+        # self.policy_net =  FA.NN(input_dim= observation_dim, output_dim= action_dim)
+        self.policy_net= FA.MultiPI(controllers_number= self.obs_dim//2)
         
         # Value network
-        self.value_net = nn.Sequential(
-            nn.Linear(self.obs_dim, 4), nn.ReLU(),
-            nn.Linear(4,2), nn.ReLU(),
-            nn.Linear(2,value_dim)
-        )
+        # self.value_net = FA.NN(input_dim= observation_dim, output_dim= value_dim)
+        self.value_net= nn.Linear(self.obs_dim, value_dim, bias= False)
+
 
     def forward(self, features: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
         return self.forward_actor(features), self.forward_critic(features)
