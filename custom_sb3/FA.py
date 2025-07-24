@@ -32,10 +32,10 @@ class NN(nn.Module):
 class Quadratic(nn.Module):
     def __init__(self, input_dim, output_dim) -> None:
         super().__init__()
-        self.quad = nn.Sequential()
+        self.linear = nn.Linear(input_dim, output_dim, bias= False)
 
     def forward(self, x: th.Tensor) -> th.Tensor:
-        return th.Tensor()
+        return self.linear(th.square(x))
     
 
 class CustomDistribution(DiagGaussianDistribution):

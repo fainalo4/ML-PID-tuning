@@ -53,7 +53,7 @@ class CustomExtractor(nn.Module):
         
         # Value network
         # self.value_net = FA.NN(input_dim= observation_dim, output_dim= value_dim)
-        self.value_net= nn.Linear(self.obs_dim, value_dim, bias= False)
+        self.value_net= FA.Quadratic(self.obs_dim, value_dim)
 
 
     def forward(self, features: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
