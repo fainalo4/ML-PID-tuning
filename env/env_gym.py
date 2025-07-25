@@ -85,5 +85,9 @@ class Env(gym.Env):
         v0 = np.random.uniform(low= 15, high=20, size=(v_dim,1)) 
         v=v0
         for t in range(self.T-1):
-            v= np.concatenate([v, v[:,t].reshape(v_dim,1) + np.random.normal(size=(v_dim,1)) * 0.5], axis=1)
+            if type(self.system) is Continuous:
+                v= np.concatenate([v, v[:,t].reshape(v_dim,1) + np.random.normal(size=(v_dim,1)) * 0.05], axis=1)
+                v= np.clip(v, 15, 20)
+            else:
+                v= np.concatenate([v, v[:,t].reshape(v_dim,1) + np.random.normal(size=(v_dim,1)) * 0.5], axis=1)
         return v
