@@ -18,6 +18,17 @@ class MultiPI(nn.Module):
             y= th.cat([y, l(x[0][2*i:2*(i+1)]) ])
         return y
 
+class MultiPIpositive(nn.Module):
+    def __init__(self, controllers_number) -> None:
+        super().__init__()
+        self.params = nn.Parameter(th.Tensor([[0,0]]* controllers_number))
+
+    def forward(self, x : th.Tensor) -> th.Tensor:
+        y= th.Tensor()
+        for i,p in enumerate(self.params):
+            y= th.cat([y, th.matmul( th.exp(p), x[2*i:2*(i+1)].T)]) 
+        return y
+
 class NN(nn.Module):
     def __init__(self, input_dim, output_dim) -> None:
         super().__init__()
