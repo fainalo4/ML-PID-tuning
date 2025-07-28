@@ -105,7 +105,7 @@ def plot_test(time, states, x_t, actions, v_test, umin, umax):
     ax1.plot(time, states, color=color, label='x')
     ax1.plot(time, v_test, color=color, alpha=0.5, label='v')
     ax1.tick_params(axis='y', labelcolor=color)
-    ax1.set_ylim((0, 30))
+    ax1.set_ylim((-1, 31))
     ax1.grid()
 
     plt.axhline(y=x_t[0], color=color, linestyle='--', label='x target')
