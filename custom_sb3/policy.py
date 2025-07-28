@@ -49,7 +49,7 @@ class CustomExtractor(nn.Module):
 
         # Policy network
         # self.policy_net =  FA.NN(input_dim= observation_dim, output_dim= action_dim)
-        self.policy_net= FA.MultiPI(controllers_number= self.obs_dim//2)
+        self.policy_net= FA.MultiPIpositive(controllers_number= observation_dim // 2)
         
         # Value network
         # self.value_net = FA.NN(input_dim= observation_dim, output_dim= value_dim)

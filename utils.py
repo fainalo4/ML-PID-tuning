@@ -4,16 +4,18 @@ import matplotlib.pyplot as plt
 EPISODE_REWARDS= []
 
 def reward_callback(_locals, _globals):
+    info= _locals['infos']
     # This callback is called at each step, but we want to save rewards at the end of each episode
-    if len(_locals['infos']) > 0 and 'episode' in _locals['infos'][0]:
-        EPISODE_REWARDS.append(_locals['infos'][0]['episode']['r'])
+    if len(info) > 0 and 'episode' in info[0]:
+        r= info[0]['episode']['r']
+        EPISODE_REWARDS.append(r)
 
     # This part performs early stopping
     output= True
-    sb3_w= 100
+    sb3_w= 10
     if len(EPISODE_REWARDS) > sb3_w:
         avg_reward= np.mean(EPISODE_REWARDS[-sb3_w::])
-        if avg_reward > -50: output= False
+        if avg_reward > -1e5: output= False
 
     return output
 
@@ -53,6 +55,45 @@ def pid_trajectory(env, v, x0, controller):
         done= term or trunc
     
     return states, actions, rewards, sys_states
+
+
+def rl_trajectory(env, v, x0, controller):
+    """
+    Sample trajectories from the environment using the given RL controller.
+    Returns a list of (state, action, reward) tuples for each episode.
+    """
+    verbose= False
+
+    obs_0, _ = env.reset(v=v, x0=x0)
+    state= obs_0 
+
+    rewards = []
+    states = []
+    actions = []
+    sys_states= env.system.x
+    sys_obs= env.system.observe(env.system.x)
+
+    done = False
+    t=0 
+    while not done:
+        t+= 1
+        if verbose: print("t: ", t)
+
+        action = controller.predict(state)[0]
+
+        new_state, reward, term, trunc, _ = env.step(action)
+        if verbose: print("state: ", state, "new_ state: ", new_state, "action: ", action, "reward: ", reward)
+
+        states.append(new_state)
+        actions.append(action[0][0])
+        rewards.append(reward)
+        sys_states= np.concatenate([sys_states, env.system.x], axis=1)
+        sys_obs= np.concatenate([sys_obs, env.system.observe(env.system.x)])
+
+        state= new_state
+        done= term or trunc
+    
+    return states, actions, rewards, sys_states, sys_obs
 
 
 def plot_test(time, states, x_t, actions, v_test, umin, umax):

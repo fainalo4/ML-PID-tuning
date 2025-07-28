@@ -59,7 +59,7 @@ class Env(gym.Env):
             self.terminated= True
         if (x_p < 0).any() or (x_p > 30).any(): 
             self.truncated= True
-            reward+= -1000
+            reward+= -1e8
 
         if verbose: print('x', x_p, 'o:', obs,'a', u, 'r:', reward )
 
@@ -69,13 +69,13 @@ class Env(gym.Env):
         '''
         Compute average reward over observations
         '''
-        r_vec= (self.system.x_t.T - x)**2 + 0.0001*u**2
+        r_vec= (self.system.dt*(self.system.x_t.T - x))**2 + 0.0001*(self.system.dt*u)**2
         dim= x.shape[0]
         return float(-np.sum(r_vec)/dim)
         
     def observation(self, x):
         self.error= self.system.x_t - x
-        self.error_integral+= self.error
+        self.error_integral+= self.error*self.system.dt
         obs= np.concatenate([self.error, self.error_integral], axis=1)
         return obs.flatten().reshape(obs.size,1)
     
@@ -87,7 +87,7 @@ class Env(gym.Env):
         for t in range(self.T-1):
             if type(self.system) is Continuous:
                 v= np.concatenate([v, v[:,t].reshape(v_dim,1) + np.random.normal(size=(v_dim,1)) * 0.05], axis=1)
-                v= np.clip(v, 15, 20)
+                v= np.clip(v, 15, 25)
             else:
                 v= np.concatenate([v, v[:,t].reshape(v_dim,1) + np.random.normal(size=(v_dim,1)) * 0.5], axis=1)
         return v
