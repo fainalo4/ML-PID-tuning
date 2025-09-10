@@ -14,23 +14,23 @@ from stable_baselines3.common.distributions import (DiagGaussianDistribution,
 class MultiPI(nn.Module):
     def __init__(self, controllers_number) -> None:
         super().__init__()
-        self.linears = nn.ModuleList([nn.Linear(2, 1, bias= False) for i in range(controllers_number)])
+        self.linear = nn.ModuleList([nn.Linear(2, 1, bias= False) for i in range(controllers_number)])
 
     def forward(self, x : th.Tensor) -> th.Tensor:
         y= th.Tensor()
-        for i,l in enumerate(self.linears):
+        for i,l in enumerate(self.linear):
             y= th.cat([y, l(x[0][2*i:2*(i+1)]) ])
         return y
     
 class MultiPIpositive(nn.Module):
     def __init__(self, controllers_number) -> None:
         super().__init__()
-        self.params = nn.Parameter(th.Tensor([[0, -2.3]]* controllers_number))
+        self.params = nn.Parameter(th.Tensor([[0,0]]* controllers_number))
 
     def forward(self, x : th.Tensor) -> th.Tensor:
         y= th.Tensor()
         for i,p in enumerate(self.params):
-            y= th.cat([y, th.matmul( th.exp(p), x[2*i:2*(i+1)].T)]) 
+            y= th.cat([y, th.matmul( th.log(1+th.exp(p)), x[2*i:2*(i+1)].T)]) 
         return y
     
 # class MultiPIpositive2(nn.Module):
@@ -59,8 +59,11 @@ class Quadratic(nn.Module):
         self.linear = nn.Linear(input_dim, output_dim, bias= False)
 
     def forward(self, x: th.Tensor) -> th.Tensor:
-        return self.linear(th.square(x))
+        return self.linear(th.cat([th.square(x[:,0]), x[:,1]]).reshape(2,-1).T)
+        # return self.linear(th.square(x))
     
+# ---------------------------------------------------------------- # 
+# ---------------------------------------------------------------- #    
 
 class CustomDistribution(DiagGaussianDistribution):
     def __init__(self, action_dim: int):
