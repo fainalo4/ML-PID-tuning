@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import torch as th
 
 EPISODE_REWARDS= []
 
@@ -15,10 +16,19 @@ def reward_callback(_locals, _globals):
     sb3_w= 10
     if len(EPISODE_REWARDS) > sb3_w:
         avg_reward= np.mean(EPISODE_REWARDS[-sb3_w::])
-        if avg_reward > -1e5: output= False
+        if avg_reward > -5e4: output= False
 
     return output
 
+def get_params(a2c_):
+    # policy_= a2c_.policy.mlp_extractor.policy_net.linear[0].weight[0].data.tolist()  # type: ignore
+    # policy_= a2c_.policy.mlp_extractor.policy_net.params.parametrizations.weight.original.data.numpy().flatten() # type: ignore
+    # value_= (a2c_.policy.mlp_extractor.value_net.linear.weight.data     # type: ignore
+            #  * a2c_.policy.value_net.weight.data)[0].tolist()               # type: ignore
+
+    policy_= th.log(1+th.exp(a2c_.policy.mlp_extractor.policy_net.params[0].data)).tolist() # type: ignore
+    value_= a2c_.policy.mlp_extractor.value_net.linear.weight.data[0].tolist()               # type: ignore
+    return policy_, value_
 
 def pid_trajectory(env, v, x0, controller):
     """
