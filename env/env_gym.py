@@ -69,7 +69,16 @@ class Env(gym.Env):
         '''
         Compute average reward over observations
         '''
-        r_vec= (self.system.dt*(self.system.x_t.T - x))**2 + 0.0001*(self.system.dt*u)**2
+        error_t= self.system.x_t.T - x
+
+        tracking= (self.system.dt*error_t)**2
+        min_energy= 0.0001*(self.system.dt*u)**2
+        refine= np.exp(-np.abs(error_t))
+        
+        r_vec= tracking + min_energy + refine
+
+        # r_clip= np.clip(r_vec, a_min=-1e4, a_max= None)
+
         dim= x.shape[0]
         return float(-np.sum(r_vec)/dim)
         
