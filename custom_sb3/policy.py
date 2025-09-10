@@ -48,13 +48,10 @@ class CustomExtractor(nn.Module):
         self.obs_dim= observation_dim
 
         # Policy network
-        # self.policy_net =  FA.NN(input_dim= observation_dim, output_dim= action_dim)
         self.policy_net= FA.MultiPIpositive(controllers_number= observation_dim // 2)
         
         # Value network
-        # self.value_net = FA.NN(input_dim= observation_dim, output_dim= value_dim)
         self.value_net= FA.Quadratic(self.obs_dim, value_dim)
-
 
     def forward(self, features: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
         return self.forward_actor(features), self.forward_critic(features)
@@ -114,7 +111,8 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         self.action_net, self.log_std = self.action_dist.proba_distribution_net(
                 latent_dim=latent_dim_pi, log_std_init=self.log_std_init)
         
-        self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1, bias= False)
+        # self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1, bias= False)
+        self.value_net = nn.Identity(self.mlp_extractor.latent_dim_vf, 1)
 
         # Setup optimizer with initial learning rate
         self.optimizer = self.optimizer_class(self.parameters(), lr= lr_schedule(1), **self.optimizer_kwargs) # type: ignore
