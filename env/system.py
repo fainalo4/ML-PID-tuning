@@ -1,7 +1,7 @@
 import numpy as np
 
 class Discrete:
-    def __init__(self, A, Bu, Bv, x0, x_t, v,
+    def __init__(self, model, x0, x_t, v,
                  obs_index, act_index):
         """
         Initialize the environment with system matrices A, B and initial state x0.
@@ -11,9 +11,9 @@ class Discrete:
         x_t: Target state (numpy array)
         v: Disturbance vector (numpy array)
         """
-        self.A = A
-        self.Bu = Bu
-        self.Bv = Bv
+        self.A = model['A']
+        self.Bu = model['Bu']
+        self.Bv = model['Bv']
 
         self.x0 = x0
         self.x = x0
@@ -51,7 +51,7 @@ class Discrete:
 
 
 class Continuous(Discrete):
-    def __init__(self, A, Bu, Bv, x0, x_t, v,
+    def __init__(self, model, x0, x_t, v,
                  obs_index, act_index,
                  dt):
         """
@@ -63,7 +63,7 @@ class Continuous(Discrete):
         x_t: Target state (numpy array)
         v: Disturbance vector (numpy array)
         """
-        super().__init__(A, Bu, Bv, x0, x_t, v, obs_index, act_index)
+        super().__init__(model, x0, x_t, v, obs_index, act_index)
 
         self.dt= dt
 
@@ -78,6 +78,57 @@ class Continuous(Discrete):
 
         # Continuous time state update
         self.x = self.x + (self.A @ self.x + self.Bu @ c_u + self.Bv @ v_t) * self.dt
+        self.t += 1
+
+        return self.observe(self.x)
+    
+
+class Bilinear(Discrete):
+    def __init__(self, model, x0, x_t, v,
+                 obs_index, act_index,
+                 dt):
+        """
+        Initialize the environment with system matrices A, B in the model and initial state x0.
+        model: collection of matrixes defining the bilinear system (dict of numpy arrays)
+        x0: Initial state (numpy array)
+        x_t: Target state (numpy array)
+        v: Disturbance vector (numpy array)
+        """
+
+        self.A= model['A']
+        self.Bu= model['Bu']
+        self.Bv= model['Bv']
+        self.Bxu= model['Bxu']
+        self.Bvu= model['Bvu']
+
+        self.x0 = x0
+        self.x = x0
+        self.x_t= x_t
+        self.v= v
+
+        self.t= 0
+        self.dt= dt
+
+        self.observability= obs_index
+        self.actuability= act_index
+
+    def step(self, u):
+        """
+        Apply control input u and update the state.
+        u: Control input (numpy array)
+        Returns the new state.
+        """
+
+        c_u= self.actuate(u)
+        v_t= self.v[:,self.t].reshape(self.Bv.shape[1],1)
+
+        b_xu= sum([self.Bxu[:,:,i]@ self.x * u_i for i,u_i in enumerate(c_u)])
+        b_vu= sum([self.Bvu[:,:,i]@ v_t    * u_i for i,u_i in enumerate(c_u)])
+
+        self.x = self.x + (self.A @ self.x + self.Bu @ c_u + self.Bv @ v_t \
+                 + b_xu \
+                 + b_vu) * self.dt
+        
         self.t += 1
 
         return self.observe(self.x)
