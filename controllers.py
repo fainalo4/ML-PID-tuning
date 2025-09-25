@@ -1,7 +1,7 @@
 import numpy as np
 
 class PID:
-    def __init__(self, Kp, Ki, Kd, setpoint, umin, umax, dt):
+    def __init__(self, Kp, Ki, Kd, setpoint=22, umin=0, umax=100, dt=15):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
