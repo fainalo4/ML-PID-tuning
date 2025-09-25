@@ -52,8 +52,8 @@ class Env(gym.Env):
 
         x_p=  self.system.step(u)
 
-        obs= self.observation(x_p)
-        reward= self.rewards(x_p,u)
+        obs= self.observation(x_p) 
+        reward= self.rewards(x_p,u)  #TODO: check if correct x_p or self.system.x R(s,a) or R(s',a)
 
         if self.system.t >= self.T: 
             self.terminated= True
