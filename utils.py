@@ -114,15 +114,15 @@ def plot_test(time, states, x_t, actions, v_test, umin, umax):
     fig, ax1 = plt.subplots()
 
     color = 'tab:blue'
-    ax1.set_xlabel('time (hr)')
+    ax1.set_xlabel('time')
     ax1.set_ylabel('T [°C]', color=color)
     ax1.plot(time, states, color=color, label='x')
-    ax1.plot(time, v_test, color=color, alpha=0.5, label='v')
+    if not v_test==None: ax1.plot(time, v_test, color=color, alpha=0.5, label='v')
     ax1.tick_params(axis='y', labelcolor=color)
     ax1.set_ylim((-1, 31))
     ax1.grid()
 
-    plt.axhline(y=x_t[0], color=color, linestyle='--', label='x target')
+    plt.axhline(y=x_t[0], color=color, linestyle='--', label='x*')
 
     ax2 = ax1.twinx()  # instantiate a second Axes that shares the same x-axis
 
@@ -134,4 +134,29 @@ def plot_test(time, states, x_t, actions, v_test, umin, umax):
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     fig.legend(bbox_to_anchor=(0.3, 0.4))
+
+    ax1.tick_params(axis='x',rotation=90)
     plt.show()
+
+
+def episodic_rewards(system, x, u):
+        '''
+        Compute average reward over observations
+        '''
+        error_t= system.x_t.T - x
+
+        tracking= (system.dt*error_t)**2
+        min_energy= (0.0001*(system.dt*u)**2).reshape(tracking.shape)
+        refine= np.exp(-np.abs(error_t))
+        
+        r_vec= tracking + min_energy + refine
+
+        dim= x.shape[1]
+        if dim>1: raise NotImplementedError
+
+        ep_total_reward= float(-np.sum(r_vec))
+        ep_tracking= float(-np.sum(tracking))
+        ep_min_energy= float(-np.sum(min_energy))
+        ep_refine= float(-np.sum(refine))
+
+        return ep_total_reward, ep_tracking, ep_min_energy, ep_refine
