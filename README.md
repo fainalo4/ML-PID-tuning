@@ -1,8 +1,5 @@
-# RLinear
-
-Another environment for RL agents.    
-This time, the simplest possible.   
-The idea is to wrap generic dynamic LTI systems to compare PID and RL controllers.    
+Another environment for RL agents, but this time, maybe, the simplest possible.   
+The idea is to wrap generic dynamic LTI systems to compare PID-tuning data-driven techniques.
 
 ## Repo structure
 - *custom_sb3* : a series of classes to use SB3 algorithm [https://stable-baselines3.readthedocs.io/en/master/#] with custom inner function approximations
@@ -17,6 +14,10 @@ The idea is to wrap generic dynamic LTI systems to compare PID and RL controller
     - REINFORCE
     - REINFORCE with baseline
     - Actor Critic with TD-error
+
+- *ML*:
+    - disturbances: to load and preprocess data for system disturbance
+    - `simulate.ipynb`: to generate simulated scenarios and store best PID gains 
 
 - `controllers.py`: PID and Relay classes for benchmarking
 - `utils.py`: functions for testing and plotting results
